@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>세린캠 · 갤럭시 반납 초기화 콘솔</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  :root{
+    --bg:#e9edf2; --panel:#ffffff; --ink:#12171f; --ink-soft:#5a6472;
+    --line:#dfe4ea; --line-strong:#c7cfd8;
+    --go:#0fb981; --go-deep:#059669; --go-soft:#e6f8f1;
+    --warn:#b7791f; --warn-bg:#fdf6e6; --warn-line:#f2d99a;
+    --danger:#e11d48; --danger-deep:#be123c; --danger-soft:#fdeef1;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--sans); background:var(--bg); color:var(--ink);
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  /* Header */
+  .top{
+    background:var(--ink); color:#fff; border-radius:var(--radius) var(--radius) 0 0;
+    padding:18px 22px; display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .rec{width:11px;height:11px;border-radius:50%;background:#4b5563;flex:none}
+  .rec.live{background:var(--go);box-shadow:0 0 0 0 rgba(15,185,129,.7);animation:pulse 1.6s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 9px rgba(15,185,129,0)}100%{box-shadow:0 0 0 0 rgba(15,185,129,0)}}
+  .brand h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.2px}
+  .brand p{margin:1px 0 0;font-size:12px;color:#9aa4b2}
+  .status{font-family:var(--mono);font-size:12px;color:#9aa4b2;text-align:right;white-space:nowrap}
+  .status b{color:#fff;font-weight:600}
+
+  /* Panel body */
+  .panel{background:var(--panel);border:1px solid var(--line);border-top:none;
+    border-radius:0 0 var(--radius) var(--radius);overflow:hidden}
+  .sec{padding:22px}
+  .sec + .sec{border-top:1px solid var(--line)}
+  .sec h2{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);margin:0 0 14px}
+
+  /* Connect row */
+  .connect-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .device-line{font-family:var(--mono);font-size:13px;color:var(--ink-soft)}
+  .device-line b{color:var(--ink)}
+
+  /* Storage gauge */
+  .gauge{margin-top:16px;display:none}
+  .gauge.show{display:block}
+  .gauge-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+  .gauge-head span{font-family:var(--mono)}
+  .bar{height:22px;background:#eef1f4;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden;position:relative}
+  .bar i{position:absolute;inset:0;width:0;background:linear-gradient(90deg,#f97316,#ef4444);transition:width .7s ease}
+  .bar.freed i{background:linear-gradient(90deg,var(--go),var(--go-deep))}
+  .freed-note{margin-top:8px;font-size:13px;color:var(--go-deep);font-weight:600;display:none}
+  .freed-note.show{display:block}
+
+  /* Task list */
+  .task{display:flex;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+  .task:last-child{border-bottom:none}
+  .task input{margin-top:3px;width:17px;height:17px;accent-color:var(--go-deep);flex:none;cursor:pointer}
+  .task .t-body{flex:1;min-width:0}
+  .task .t-title{font-weight:600;font-size:15px}
+  .task .t-desc{font-size:13px;color:var(--ink-soft);margin-top:2px}
+  .task .t-state{font-family:var(--mono);font-size:12px;margin-top:4px;display:none}
+  .task .t-state.show{display:block}
+  .t-state.ok{color:var(--go-deep)} .t-state.err{color:var(--danger)} .t-state.run{color:var(--warn)}
+
+  /* App list */
+  .apps{margin-top:12px;border:1px solid var(--line);border-radius:10px;max-height:230px;overflow:auto;display:none}
+  .apps.show{display:block}
+  .app{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:14px}
+  .app:last-child{border-bottom:none}
+  .app input{width:16px;height:16px;accent-color:var(--danger);cursor:pointer}
+  .app .pkg{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .app-name{font-weight:500}
+
+  /* Buttons */
+  button{font-family:var(--sans);font-weight:600;font-size:14px;border-radius:10px;
+    border:1px solid transparent;padding:11px 18px;cursor:pointer;transition:.15s;line-height:1}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .btn-go{background:var(--ink);color:#fff}
+  .btn-go:not(:disabled):hover{background:#000}
+  .btn-ghost{background:#fff;color:var(--ink);border-color:var(--line-strong)}
+  .btn-ghost:not(:disabled):hover{border-color:var(--ink-soft)}
+  .btn-run{width:100%;background:var(--danger);color:#fff;font-size:16px;padding:16px}
+  .btn-run:not(:disabled):hover{background:var(--danger-deep)}
+  .btn-sm{padding:8px 13px;font-size:13px}
+
+  /* Warning banner */
+  .keep{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;
+    padding:12px 15px;font-size:13px;color:#7a5410;display:flex;gap:9px}
+  .keep b{color:#5c3f0c}
+  .keep svg{flex:none;margin-top:1px}
+
+  /* Terminal log */
+  .term{background:#0c1117;border-radius:10px;padding:14px 16px;font-family:var(--mono);
+    font-size:12.5px;line-height:1.7;color:#c9d4e0;height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  .term:empty::before{content:"대기 중 — 기기를 연결하면 로그가 표시됩니다.";color:#4b5563}
+  .term .l-ok{color:#34d399} .term .l-err{color:#fb7185} .term .l-run{color:#fbbf24} .term .l-dim{color:#6b7280}
+
+  /* Setup note */
+  .setup{font-size:13px;color:var(--ink-soft);background:#f5f7f9;border:1px solid var(--line);
+    border-radius:10px;padding:14px 16px;margin-top:18px}
+  .setup ol{margin:8px 0 0;padding-left:20px} .setup li{margin:3px 0}
+  .setup code{font-family:var(--mono);background:#e6eaee;padding:1px 6px;border-radius:5px;font-size:12px}
+  .muted{color:var(--ink-soft);font-size:12.5px;margin-top:10px}
+  .unsupported{display:none;background:var(--danger-soft);border:1px solid #f7c4d0;color:var(--danger-deep);
+    padding:12px 15px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <span class="rec" id="rec"></span>
+      <div>
+        <h1>갤럭시 반납 초기화 콘솔</h1>
+        <p>세린캠 대여폰 정리 · WebUSB + ADB</p>
+      </div>
+    </div>
+    <div class="status" id="status">상태 <b>미연결</b></div>
+  </div>
+
+  <div class="panel">
+
+    <!-- 연결 -->
+    <div class="sec">
+      <h2>1 · 기기 연결</h2>
+      <div id="unsupported" class="unsupported"></div>
+      <div class="connect-row">
+        <button class="btn-go" id="connectBtn">기기 연결</button>
+        <button class="btn-ghost btn-sm" id="disconnectBtn" disabled>연결 해제</button>
+        <div class="device-line" id="deviceLine">USB로 연결된 갤럭시를 선택하세요.</div>
+      </div>
+
+      <div class="gauge" id="gauge">
+        <div class="gauge-head"><span>내부 저장공간</span><span id="gaugeText">—</span></div>
+        <div class="bar" id="bar"><i id="barFill"></i></div>
+        <div class="freed-note" id="freedNote"></div>
+      </div>
+    </div>
+
+    <!-- 정리 항목 -->
+    <div class="sec">
+      <h2>2 · 정리 항목 선택</h2>
+      <div id="taskList"></div>
+
+      <div style="margin-top:6px">
+        <button class="btn-ghost btn-sm" id="loadAppsBtn" disabled>설치된 앱 불러오기 (로그아웃할 앱 선택)</button>
+        <div class="apps" id="appList"></div>
+      </div>
+
+      <div class="keep" style="margin-top:16px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b7791f" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div><b>유지되는 항목:</b> 삼성 계정 로그인 · 카메라 설정 · 설치된 앱 자체는 그대로 둡니다. 아래 작업은 삼성 계정을 절대 로그아웃하지 않습니다.</div>
+      </div>
+    </div>
+
+    <!-- 실행 -->
+    <div class="sec">
+      <h2>3 · 실행</h2>
+      <button class="btn-run" id="runBtn" disabled>선택한 항목 정리 시작</button>
+      <div class="term" id="term" style="margin-top:16px"></div>
+    </div>
+
+    <!-- 준비 안내 -->
+    <div class="sec">
+      <h2>처음 사용 전 준비</h2>
+      <div class="setup">
+        이 페이지는 <b>PC의 Chrome / Edge</b>에서 열어야 하며, <b>HTTPS(GitHub Pages 등) 또는 localhost</b>에서만 동작합니다.
+        <ol>
+          <li>대여폰: <code>설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호</code> 7번 탭 → 개발자 옵션 활성화</li>
+          <li><code>개발자 옵션 → USB 디버깅</code> 켜기</li>
+          <li>USB 케이블로 PC 연결 → 폰에 뜨는 <b>USB 디버깅 허용</b> 팝업에서 "항상 허용" 체크 후 허용</li>
+          <li>PC에서 다른 ADB(Android Studio 등)가 실행 중이면 <code>adb kill-server</code>로 종료</li>
+        </ol>
+        <div class="muted">삼성 계정·카메라 설정은 건드리지 않으므로, 재세팅 없이 다음 고객에게 바로 대여할 수 있습니다.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { Adb, AdbDaemonTransport } from "https://esm.sh/@yume-chan/[email protected]";
+import { AdbDaemonWebUsbDeviceManager } from "https://esm.sh/@yume-chan/[email protected]?deps=@yume-chan/[email protected]";
+import AdbWebCredentialStore from "https://esm.sh/@yume-chan/[email protected]?deps=@yume-chan/[email protected]";
+
+/* ---------- 상태 ---------- */
+let adb = null;
+let device = null;
+let availBefore = null;
+
+/* ---------- DOM ---------- */
+const $ = (id) => document.getElementById(id);
+const term = $("term");
+
+/* ---------- 로그 ---------- */
+function log(msg, cls = "l-dim") {
+  const line = document.createElement("span");
+  line.className = cls;
+  line.textContent = msg + "\n";
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+}
+
+/* ---------- 셸 실행 헬퍼 ---------- */
+async function sh(cmd) {
+  // 기기 셸에서 명령 실행 후 전체 출력(문자열) 반환
+  return (await adb.subprocess.noneProtocol.spawnWaitText(cmd)).trim();
+}
+
+/* ---------- 저장공간 조회 (KB→GB) ---------- */
+async function availGB() {
+  const out = await sh("df -k /sdcard | tail -n 1");
+  const f = out.split(/\s+/);
+  const pct = f.findIndex((x) => x.includes("%"));   // Use% 위치 기준으로 안정적으로 파싱
+  const kb = parseInt(pct > 0 ? f[pct - 1] : f[3], 10);
+  return isNaN(kb) ? null : kb / 1024 / 1024;
+}
+async function totalGB() {
+  const out = await sh("df -k /sdcard | tail -n 1");
+  const f = out.split(/\s+/);
+  const pct = f.findIndex((x) => x.includes("%"));
+  const kb = parseInt(pct > 1 ? f[pct - 3] : f[1], 10); // total = Use% 세 칸 앞
+  return isNaN(kb) ? null : kb / 1024 / 1024;
+}
+
+async function refreshGauge(freedMode = false) {
+  const [avail, total] = await Promise.all([availGB(), totalGB()]);
+  if (avail == null || total == null) return avail;
+  const used = total - avail;
+  $("gauge").classList.add("show");
+  $("bar").classList.toggle("freed", freedMode);
+  $("barFill").style.width = Math.max(2, (used / total) * 100).toFixed(1) + "%";
+  $("gaugeText").textContent = `여유 ${avail.toFixed(1)} GB / 전체 ${total.toFixed(0)} GB`;
+  return avail;
+}
+
+/* ---------- 정리 작업 정의 ---------- */
+const TASKS = [
+  {
+    id: "media",
+    title: "개인 미디어 파일 삭제",
+    desc: "사진·영상·스크린샷·다운로드·문서·녹음 파일 삭제 (저장공간 확보)",
+    checked: true,
+    run: async () => {
+      const cmd =
+        'for d in "DCIM/Camera" "DCIM/Screenshots" "DCIM/.thumbnails" "Pictures" "Movies" "Download" "Documents" "Recordings" "Sounds"; do rm -rf "/sdcard/$d/"* 2>/dev/null; done; echo DONE';
+      await sh(cmd);
+      return "미디어·다운로드 폴더를 비웠습니다.";
+    },
+  },
+  {
+    id: "trash",
+    title: "갤러리 휴지통 비우기",
+    desc: "'최근 삭제한 항목' 등 휴지통에 남은 파일까지 완전 삭제",
+    checked: true,
+    run: async () => {
+      const cmd =
+        'find /sdcard -type f -name ".trashed-*" 2>/dev/null | while IFS= read -r f; do rm -f "$f"; done; rm -rf /sdcard/.Trash /sdcard/DCIM/.Trash /sdcard/Pictures/.Trash 2>/dev/null; echo DONE';
+      await sh(cmd);
+      return "휴지통 잔여 파일을 정리했습니다.";
+    },
+  },
+  {
+    id: "cache",
+    title: "앱 캐시 정리",
+    desc: "모든 앱의 임시 캐시 삭제 (로그인·설정은 유지)",
+    checked: true,
+    run: async () => {
+      await sh("pm trim-caches 999999999999");
+      return "전체 앱 캐시를 정리했습니다.";
+    },
+  },
+  {
+    id: "browser",
+    title: "브라우저 기록·쿠키 삭제",
+    desc: "삼성 인터넷 · Chrome의 방문기록·쿠키·로그인 초기화",
+    checked: true,
+    run: async () => {
+      const out = await sh(
+        "pm clear com.android.chrome 2>/dev/null; pm clear com.sec.android.app.sbrowser 2>/dev/null; echo ---"
+      );
+      const n = (out.match(/Success/g) || []).length;
+      return n > 0 ? `브라우저 ${n}개를 초기화했습니다.` : "설치된 대상 브라우저가 없습니다.";
+    },
+  },
+];
+
+/* 삼성 계정·카메라 등 절대 초기화 금지 패키지 (앱 목록에서 자동 제외) */
+const PROTECTED = new Set([
+  "com.osp.app.signin",                       // 삼성 계정
+  "com.samsung.android.mobileservice",
+  "com.samsung.android.scloud",               // Samsung Cloud
+  "com.samsung.android.fmm",                  // Find My Mobile
+  "com.samsung.android.samsungpass",
+  "com.samsung.android.samsungpassautofill",
+  "com.sec.android.app.camera",               // 카메라 (설정 유지)
+  "com.sec.android.gallery3d",                // 갤러리 (휴지통은 위에서 처리)
+  "com.samsung.android.dialer",
+  "com.samsung.android.messaging",
+]);
+
+/* 자주 쓰는 앱 한글 표기 */
+const APP_NAMES = {
+  "com.google.android.youtube": "YouTube",
+  "com.google.android.apps.youtube.music": "YouTube Music",
+  "com.google.android.apps.photos": "Google 포토",
+  "com.google.android.gm": "Gmail",
+  "com.instagram.android": "Instagram",
+  "com.twitter.android": "X (트위터)",
+  "com.zhiliaoapp.musically": "TikTok",
+  "com.ss.android.ugc.trill": "TikTok",
+  "com.kakao.talk": "카카오톡",
+  "com.nhn.android.search": "네이버",
+  "com.nhn.android.navercafe": "네이버 카페",
+  "com.facebook.katana": "Facebook",
+  "com.spotify.music": "Spotify",
+  "tv.twitch.android.app": "Twitch",
+  "com.weverse.app": "Weverse",
+  "com.dcinside.app.android": "디시인사이드",
+  "com.discord": "Discord",
+  "com.google.android.apps.tachyon": "Google Meet",
+};
+
+/* ---------- 정리 항목 렌더 ---------- */
+function renderTasks() {
+  $("taskList").innerHTML = "";
+  for (const t of TASKS) {
+    const row = document.createElement("div");
+    row.className = "task";
+    row.innerHTML = `
+      <input type="checkbox" id="chk_${t.id}" ${t.checked ? "checked" : ""}/>
+      <div class="t-body">
+        <div class="t-title">${t.title}</div>
+        <div class="t-desc">${t.desc}</div>
+        <div class="t-state" id="state_${t.id}"></div>
+      </div>`;
+    $("taskList").appendChild(row);
+  }
+}
+renderTasks();
+
+function setState(id, text, cls) {
+  const el = $("state_" + id);
+  el.textContent = text;
+  el.className = "t-state show " + cls;
+}
+
+/* ---------- 연결 ---------- */
+async function connect() {
+  const Manager = AdbDaemonWebUsbDeviceManager.BROWSER;
+  if (!Manager) {
+    alert("이 브라우저는 WebUSB를 지원하지 않습니다. Chrome 또는 Edge를 사용하세요.");
+    return;
+  }
+  try {
+    log("기기 선택 대기 중…", "l-run");
+    device = await Manager.requestDevice();
+    if (!device) { log("기기를 선택하지 않았습니다.", "l-dim"); return; }
+
+    log("연결 중… 폰 화면의 'USB 디버깅 허용'을 눌러주세요.", "l-run");
+    const connection = await device.connect();
+    const credentialStore = new AdbWebCredentialStore("Serincam-Reset");
+    const transport = await AdbDaemonTransport.authenticate({
+      serial: device.serial,
+      connection,
+      credentialStore,
+    });
+    adb = new Adb(transport);
+
+    const model = await sh("getprop ro.product.marketname || getprop ro.product.model");
+    $("deviceLine").innerHTML = `연결됨: <b>${model || device.serial}</b>`;
+    $("rec").classList.add("live");
+    $("status").innerHTML = "상태 <b>연결됨</b>";
+    $("connectBtn").disabled = true;
+    $("disconnectBtn").disabled = false;
+    $("loadAppsBtn").disabled = false;
+    $("runBtn").disabled = false;
+    log(`연결 성공 · ${model || device.serial}`, "l-ok");
+
+    availBefore = await refreshGauge(false);
+    if (availBefore != null) log(`현재 여유 공간: ${availBefore.toFixed(1)} GB`, "l-dim");
+  } catch (e) {
+    const busy = e && (e.name === "DeviceBusyError" || /claim|busy/i.test(String(e.message)));
+    if (busy) {
+      log("기기가 다른 프로그램에 연결되어 있습니다. PC에서 'adb kill-server' 후 다시 시도하세요.", "l-err");
+    } else {
+      log("연결 실패: " + (e.message || e), "l-err");
+    }
+  }
+}
+
+async function disconnect() {
+  try { await adb?.close(); } catch {}
+  adb = null; device = null; availBefore = null;
+  $("rec").classList.remove("live");
+  $("status").innerHTML = "상태 <b>미연결</b>";
+  $("deviceLine").textContent = "USB로 연결된 갤럭시를 선택하세요.";
+  $("connectBtn").disabled = false;
+  ["disconnectBtn","loadAppsBtn","runBtn"].forEach(id => $(id).disabled = true);
+  $("appList").classList.remove("show"); $("appList").innerHTML = "";
+  $("gauge").classList.remove("show"); $("freedNote").classList.remove("show");
+  log("연결을 해제했습니다.", "l-dim");
+}
+
+/* ---------- 앱 목록 ---------- */
+async function loadApps() {
+  $("loadAppsBtn").disabled = true;
+  log("설치된 앱 목록을 불러오는 중…", "l-run");
+  try {
+    const out = await sh("pm list packages -3");
+    const pkgs = out.split("\n")
+      .map(l => l.replace("package:", "").trim())
+      .filter(Boolean)
+      .filter(p => !PROTECTED.has(p))
+      .sort((a,b) => (APP_NAMES[b]?1:0) - (APP_NAMES[a]?1:0));
+
+    const box = $("appList");
+    box.innerHTML = "";
+    if (!pkgs.length) { box.innerHTML = '<div class="app">초기화할 수 있는 앱이 없습니다.</div>'; }
+    for (const p of pkgs) {
+      const row = document.createElement("div");
+      row.className = "app";
+      row.innerHTML = `
+        <input type="checkbox" class="app-chk" value="${p}"/>
+        <div><div class="app-name">${APP_NAMES[p] || p.split(".").slice(-1)[0]}</div>
+        <div class="pkg">${p}</div></div>`;
+      box.appendChild(row);
+    }
+    box.classList.add("show");
+    log(`앱 ${pkgs.length}개 표시 (삼성 계정 등 보호 앱은 자동 제외)`, "l-ok");
+  } catch (e) {
+    log("앱 목록 실패: " + (e.message || e), "l-err");
+  } finally {
+    $("loadAppsBtn").disabled = false;
+  }
+}
+
+/* ---------- 실행 ---------- */
+async function run() {
+  const tasks = TASKS.filter(t => $("chk_" + t.id).checked);
+  const apps = [...document.querySelectorAll(".app-chk:checked")].map(c => c.value);
+
+  if (!tasks.length && !apps.length) { alert("정리할 항목을 하나 이상 선택하세요."); return; }
+
+  const summary = [
+    ...tasks.map(t => "· " + t.title),
+    ...(apps.length ? [`· 앱 로그인 초기화 ${apps.length}개`] : []),
+  ].join("\n");
+  if (!confirm(`아래 작업을 실행합니다. 삭제된 데이터는 복구할 수 없습니다.\n삼성 계정은 유지됩니다.\n\n${summary}\n\n계속할까요?`)) return;
+
+  $("runBtn").disabled = true; $("connectBtn").disabled = true; $("disconnectBtn").disabled = true;
+  $("freedNote").classList.remove("show");
+  const before = availBefore ?? (await availGB());
+  log("──────── 정리 시작 ────────", "l-run");
+
+  for (const t of tasks) {
+    try {
+      setState(t.id, "실행 중…", "run");
+      log(`▶ ${t.title}`, "l-run");
+      const msg = await t.run();
+      setState(t.id, "완료 · " + msg, "ok");
+      log(`  ✓ ${msg}`, "l-ok");
+    } catch (e) {
+      setState(t.id, "실패 · " + (e.message || e), "err");
+      log(`  ✗ ${t.title} 실패: ${e.message || e}`, "l-err");
+    }
+  }
+
+  if (apps.length) {
+    log(`▶ 앱 로그인 초기화 (${apps.length}개)`, "l-run");
+    for (const p of apps) {
+      try {
+        const r = await sh(`pm clear ${p}`);
+        const ok = /Success/i.test(r);
+        log(`  ${ok ? "✓" : "✗"} ${APP_NAMES[p] || p}`, ok ? "l-ok" : "l-err");
+      } catch (e) {
+        log(`  ✗ ${p}: ${e.message || e}`, "l-err");
+      }
+    }
+  }
+
+  const after = await refreshGauge(true);
+  if (before != null && after != null) {
+    const freed = after - before;
+    const txt = freed >= 0
+      ? `정리 완료 · 약 ${freed.toFixed(1)} GB 확보 (여유 ${after.toFixed(1)} GB)`
+      : `정리 완료 · 여유 ${after.toFixed(1)} GB`;
+    $("freedNote").textContent = txt;
+    $("freedNote").classList.add("show");
+    log("──────── " + txt + " ────────", "l-ok");
+  } else {
+    log("──────── 정리 완료 ────────", "l-ok");
+  }
+  availBefore = after;
+
+  $("runBtn").disabled = false; $("disconnectBtn").disabled = false;
+}
+
+/* ---------- 초기화 / 지원 확인 ---------- */
+(function init(){
+  if (!("usb" in navigator)) {
+    const u = $("unsupported");
+    u.style.display = "block";
+    u.textContent = "이 브라우저는 WebUSB를 지원하지 않습니다. PC의 Chrome 또는 Edge에서 열어주세요.";
+    $("connectBtn").disabled = true;
+  } else if (!window.isSecureContext) {
+    const u = $("unsupported");
+    u.style.display = "block";
+    u.textContent = "HTTPS 또는 localhost에서만 동작합니다. GitHub Pages 등 HTTPS 주소로 열어주세요.";
+    $("connectBtn").disabled = true;
+  }
+  $("connectBtn").addEventListener("click", connect);
+  $("disconnectBtn").addEventListener("click", disconnect);
+  $("loadAppsBtn").addEventListener("click", loadApps);
+  $("runBtn").addEventListener("click", run);
+})();
+</script>
+</body>
+</html>
