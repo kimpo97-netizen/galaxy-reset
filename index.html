@@ -4,8 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>세린캠 · 갤럭시 반납 초기화 콘솔</title>
-<link rel="stylesheet" as="style" crossorigin
-  href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
   :root{
     --bg:#e9edf2; --panel:#ffffff; --ink:#12171f; --ink-soft:#5a6472;
@@ -14,7 +12,7 @@
     --warn:#b7791f; --warn-bg:#fdf6e6; --warn-line:#f2d99a;
     --danger:#e11d48; --danger-deep:#be123c; --danger-soft:#fdeef1;
     --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    --sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Malgun Gothic", system-ui, sans-serif;
     --radius:14px;
   }
   *{box-sizing:border-box}
@@ -163,7 +161,7 @@
 
       <div class="keep" style="margin-top:16px">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b7791f" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <div><b>유지되는 항목:</b> 삼성 계정 로그인 · 카메라 설정 · 설치된 앱 자체는 그대로 둡니다. 아래 작업은 삼성 계정을 절대 로그아웃하지 않습니다.</div>
+        <div><b>유지되는 항목:</b> 삼성 계정 로그인 · 저장된 WiFi · 카메라 설정 · 설치된 앱 자체는 그대로 둡니다. 아래 작업은 삼성 계정을 로그아웃하거나 WiFi를 삭제하지 않습니다.</div>
       </div>
     </div>
 
@@ -193,9 +191,24 @@
 </div>
 
 <script type="module">
-import { Adb, AdbDaemonTransport } from "https://esm.sh/@yume-chan/[email protected]";
-import { AdbDaemonWebUsbDeviceManager } from "https://esm.sh/@yume-chan/[email protected]?deps=@yume-chan/[email protected]";
-import AdbWebCredentialStore from "https://esm.sh/@yume-chan/[email protected]?deps=@yume-chan/[email protected]";
+/* 일부 보안 프로그램(백신 등)이 "패키지명@버전" 형태의 텍스트를 이메일 주소로 오인해
+   자동으로 [email protected] 로 치환해버리는 경우가 있어, 버전 문자열을 코드에서
+   조립해 원본 HTML에 "@숫자.숫자" 형태 그대로 노출되지 않도록 처리합니다. */
+const AT = String.fromCharCode(64); // '@'
+const esmUrl = (pkg, ver, deps) => {
+  let u = `https://esm.sh/${pkg}${AT}${ver}`;
+  if (deps) u += `?deps=${deps.map(([p, v]) => `${p}${AT}${v}`).join(",")}`;
+  return u;
+};
+const ADB_VER = "2.6.0", WEBUSB_VER = "2.3.2", CRED_VER = "2.1.0";
+
+const { Adb, AdbDaemonTransport } = await import(esmUrl("@yume-chan/adb", ADB_VER));
+const { AdbDaemonWebUsbDeviceManager } = await import(
+  esmUrl("@yume-chan/adb-daemon-webusb", WEBUSB_VER, [["@yume-chan/adb", ADB_VER]])
+);
+const { default: AdbWebCredentialStore } = await import(
+  esmUrl("@yume-chan/adb-credential-web", CRED_VER, [["@yume-chan/adb", ADB_VER]])
+);
 
 /* ---------- 상태 ---------- */
 let adb = null;
