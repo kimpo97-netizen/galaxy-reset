@@ -1,6 +1,5 @@
 name: Build Windows EXE
 
-# 수동 실행 + main 브랜치 푸시 시 자동 빌드
 on:
   workflow_dispatch:
   push:
@@ -8,14 +7,17 @@ on:
     paths:
       - '세린캠_갤럭시_초기화_GUI.py'
       - '.github/workflows/build.yml'
+      - 'apks/**'          # APK 교체 시에도 자동 재빌드
 
 jobs:
   build:
-    runs-on: windows-latest   # GitHub이 제공하는 Windows 서버에서 빌드
+    runs-on: windows-latest
 
     steps:
       - name: 소스 체크아웃
         uses: actions/checkout@v4
+        with:
+          lfs: true         # Git LFS로 올린 대용량 APK도 함께 받기
 
       - name: Python 설치
         uses: actions/setup-python@v5
@@ -25,7 +27,6 @@ jobs:
       - name: PyInstaller 설치
         run: python -m pip install --upgrade pip pyinstaller
 
-      # adb(platform-tools)를 구글 공식 배포처에서 직접 받아 번들
       - name: platform-tools 다운로드
         run: |
           Invoke-WebRequest -Uri "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "pt.zip"
@@ -47,9 +48,33 @@ jobs:
             "세린캠_갤럭시_초기화_GUI.py"
         shell: pwsh
 
-      - name: 배포 폴더 구성
+      # ── 저장소의 apks 폴더를 결과물에 복사 ──────────────────
+      - name: APK 포함
         run: |
           New-Item -ItemType Directory -Force -Path "dist\apks" | Out-Null
+
+          if (Test-Path "apks") {
+              $files = Get-ChildItem -Path "apks" -File |
+                       Where-Object { $_.Extension -in ".apk", ".xapk", ".apks", ".apkm" }
+
+              if ($files.Count -gt 0) {
+                  foreach ($f in $files) {
+                      Copy-Item $f.FullName -Destination "dist\apks\" -Force
+                      $mb = [math]::Round($f.Length / 1MB, 1)
+                      Write-Host "  [포함] $($f.Name)  ($mb MB)"
+                  }
+                  $total = [math]::Round(($files | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+                  Write-Host "APK $($files.Count)개 포함 (합계 $total MB)"
+              } else {
+                  Write-Host "apks 폴더가 비어 있습니다 — 빈 폴더로 배포합니다."
+              }
+          } else {
+              Write-Host "apks 폴더 없음 — 빈 폴더로 배포합니다."
+          }
+        shell: pwsh
+
+      - name: 사용법 생성
+        run: |
           @"
           [세린캠 반납폰 초기화 도구]
 
@@ -58,16 +83,17 @@ jobs:
           3. 세린캠_반납폰_초기화.exe 실행
           4. [기기 검색] > 대상 선택 > [초기화 실행]
 
-          * 재설치할 앱은 apks 폴더에 넣으세요 (.apk / .xapk 지원)
+          * 재설치할 앱은 apks 폴더에 이미 들어있습니다.
+            추가/교체하려면 apks 폴더에 넣고 [새로고침]을 누르세요.
           * apks 폴더는 EXE와 같은 위치에 있어야 합니다.
           * 삼성계정과 카메라 설정은 보존됩니다.
           "@ | Out-File -FilePath "dist\사용법.txt" -Encoding utf8
         shell: pwsh
 
-      # 여기서 나온 zip을 Actions 페이지에서 다운로드하면 됨
       - name: 결과물 업로드
         uses: actions/upload-artifact@v4
         with:
           name: 세린캠_반납폰_초기화_EXE
           path: dist/
           retention-days: 30
+          compression-level: 0   # APK는 이미 압축본 → 재압축은 시간만 낭비
